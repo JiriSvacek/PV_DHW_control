@@ -1,6 +1,10 @@
 from machine import Pin
 
 
+def _fully_charged_condition(act_current, act_SOC):
+    return -6 <= act_current <= 6 and act_SOC >= 99.8
+
+
 class Heater:
 
     def __init__(self, pin: int, start_SOC: int, stop_SOC: int, stop_current: int, start_current: int):
@@ -15,7 +19,7 @@ class Heater:
         self.pin = Pin(pin, Pin.OUT, value=0)
 
     def _over_current_reset_condition(self, act_SOC, act_current, slave_status, master_status):
-        return (act_current > self.flag_start_current or -6 <= act_current <= 6 and act_SOC >= 99.8) \
+        return (act_current > self.flag_start_current or _fully_charged_condition(act_current, act_SOC)) \
                and self.flag_bit_current and not slave_status and master_status
 
     def _value_change_check(self):
@@ -26,7 +30,8 @@ class Heater:
         self.last_status = self.value()
 
     def _control(self, act_SOC, act_current, current_slave_status, current_master_status):
-        if act_SOC > self.start_SOC and not self.flag_bit_current and act_current > 0 and current_master_status:
+        if act_SOC > self.start_SOC and not self.flag_bit_current and (
+                act_current > 0 or _fully_charged_condition(act_current, act_SOC)) and current_master_status:
             self.flag_bit_SOC_OK = True
         if self._over_current_reset_condition(act_SOC, act_current, current_slave_status, current_master_status):
             self.flag_bit_current = False
