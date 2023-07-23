@@ -2,7 +2,7 @@ from machine import Pin
 
 
 def _fully_charged_condition(act_current, act_SOC):
-    return -6 <= act_current <= 6 and act_SOC >= 99.8
+    return -6 <= act_current <= 6 and act_SOC >= 99.3
 
 
 class Heater:
