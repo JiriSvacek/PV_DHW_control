@@ -13,14 +13,17 @@ def synchronization(clock):
 
 
 def init():
+    # Init object
     #heater_301 = Heater(6, 65, 50, -40, 14)
-    heater_70 = models.Heater(7, 82, 70, -40, 14)
-    tank = models.Heater(14, 92, 86, -40, 20)
+    heater_70 = models.Heater(machine.Pin(7, machine.Pin.OUT, value=0), 82, 70, -40, 14)
+    tank = models.Heater(machine.Pin(14, machine.Pin.OUT, value=0), 92, 86, -40, 20)
     rs485 = machine.UART(0, baudrate=19200, tx=machine.Pin(0), rx=machine.Pin(1))
     counter_L1 = models.Counter(machine.Pin(26, machine.Pin.IN, machine.Pin.PULL_DOWN))
     counter_L2 = models.Counter(machine.Pin(27, machine.Pin.IN, machine.Pin.PULL_DOWN))
     power_plant = models.PowerPlant(heater_70, tank, rs485, counter_L1, counter_L2)
+    # Init object
     clock = ds3231.DS3231(machine.I2C(0, scl=machine.Pin(21), sda=machine.Pin(20)))
+    # Init object
     lcd = models.LCD(lcd_0inch96.LCD_0inch96(), machine.Pin(15, machine.Pin.IN, machine.Pin.PULL_UP))
     return power_plant, clock, lcd
 

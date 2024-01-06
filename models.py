@@ -6,7 +6,7 @@ import machine
 
 class Heater:
 
-    def __init__(self, pin: int, start_SOC: int, stop_SOC: int, stop_current: int, start_current: int):
+    def __init__(self, pin: machine.Pin, start_SOC: int, stop_SOC: int, stop_current: int, start_current: int) -> None:
         self.start_SOC = start_SOC
         self.stop_SOC = stop_SOC
         self.flag_stop_current = stop_current
@@ -15,24 +15,24 @@ class Heater:
         self.flag_bit_SOC_OK = False
         self.change = False
         self.last_status = 0
-        self.pin = machine.Pin(pin, machine.Pin.OUT, value=0)
+        self.pin = pin
 
     @staticmethod
-    def _fully_charged_condition(act_current, act_SOC):
+    def _fully_charged_condition(act_current: float, act_SOC: float):
         return -6 <= act_current <= 6 and act_SOC >= 99.3
 
-    def _over_current_reset_condition(self, act_SOC, act_current, slave_status, master_status):
+    def _over_current_reset_condition(self, act_SOC: float, act_current: float, slave_status: bool, master_status: bool) -> None:
         return (act_current > self.flag_start_current or self._fully_charged_condition(act_current, act_SOC)) \
                and self.flag_bit_current and not slave_status and master_status
 
-    def _value_change_check(self):
+    def _value_change_check(self) -> None:
         if self.value() != self.last_status:
             self.change = True
         else:
             self.change = False
         self.last_status = self.value()
 
-    def _control(self, act_SOC, act_current, current_slave_status, current_master_status):
+    def _control(self, act_SOC: float, act_current: float, current_slave_status: bool, current_master_status: bool) -> None:
         if act_SOC > self.start_SOC and not self.flag_bit_current and (
                 act_current > 0 or self._fully_charged_condition(act_current, act_SOC)) and current_master_status:
             self.flag_bit_SOC_OK = True
@@ -46,7 +46,7 @@ class Heater:
             self.flag_bit_current = False
 
     def set(self, act_SOC: float, act_current: float, slave_change: bool, current_master_status: bool,
-            act_line_power: int, power_master_status: bool):
+            act_line_power: int, power_master_status: bool) -> None:
         if (act_line_power < 12 or act_line_power < 26 and self.value()) and power_master_status:
             self._control(act_SOC, act_current, slave_change, current_master_status)
             if self.flag_bit_SOC_OK and not self.flag_bit_current:
@@ -58,18 +58,18 @@ class Heater:
                 self.off()
         self._value_change_check()
 
-    def on(self):
+    def on(self) -> None:
         self.pin.value(1)
 
-    def off(self):
+    def off(self) -> None:
         self.pin.value(0)
 
-    def value(self):
+    def value(self) -> None:
         if self.pin.value() == 1:
             return True
         return False
 
-    def all_stop(self):
+    def all_stop(self) -> None:
         self.flag_bit_SOC_OK = False
         self.flag_bit_current = False
         self.change = False
@@ -79,19 +79,19 @@ class Heater:
 
 class Counter:
 
-    def __init__(self, pin):
+    def __init__(self, pin: machine.Pin):
         self.pin = pin
         self.pin.irq(trigger=machine.Pin.IRQ_FALLING, handler=self.trigger_count)
         self.counter = 0
 
-    def trigger_count(self, Pin):
+    def trigger_count(self, Pin: machine.Pin) -> None:
         self.counter += 1
 
 
-    def zero_counter(self):
+    def zero_counter(self) -> None:
         self.counter_L1 = 0
 
-    def get_count(self):
+    def get_count(self) -> None:
         count = self.counter
         self.zero_counter()
         return count
@@ -102,7 +102,7 @@ class LCD:
     _white = lcd_0inch96.WHITE
     _black = lcd_0inch96.BLACK
 
-    def __init__(self, lcd, pin):
+    def __init__(self, lcd: lcd_0inch96.LCD_0inch96, pin: machine.Pin):
         self.lcd = lcd
         self.lcd.write_cmd(0x36)
         self.lcd.write_data(0x70)
@@ -110,30 +110,30 @@ class LCD:
         self.button.irq(trigger=machine.Pin.IRQ_FALLING, handler=self._telemetry_show)
         self.offline_telemetry = False
 
-    def _telemetry_hide(self, timer):
+    def _telemetry_hide(self, timer: machine.Timer) -> None:
         self.offline_telemetry = False
         self.button.irq.handler = self._telemetry_show
     
-    def _telemetry_show(self, pin):
+    def _telemetry_show(self, pin: machine.Pin) -> None:
         pin.irq.handler = None
         self.offline_telemetry = True
         machine.Timer.init(mode=machine.Timer.ONE_SHOT, period=2000, callback=self._telemetry_hide)
 
-    def show_battery_params(self, SOC, current, voltage):
+    def show_battery_params(self, SOC: float, current: float, voltage: float) -> None:
         self.lcd.fill(self._black)
         self.lcd.text("Voltage: {0:6.2f} V".format(float(voltage)), 12, 6, self._blue)
         self.lcd.text("Current: {0:6.2f} A".format(float(current)), 12, 26, self._blue)
         self.lcd.text("SOC:     {0:6.1f} %".format(float(SOC)), 12, 46, self._blue)
 
-    def add_time(self, actual_time):
+    def add_time(self, actual_time: time.struct_time) -> None:
         time_string = "{0:2d}:{1:02d}:{2:02d} {3:2d}.{4:2d}.{5:4d}".format(actual_time[3], actual_time[4], actual_time[5],
                                                                        actual_time[2], actual_time[1], actual_time[0])
         self.lcd.text(time_string, 4, 66, self._blue)
 
-    def display(self):
+    def display(self) -> None:
         self.lcd.display()
     
-    def error_loop(self):
+    def error_loop(self) -> None:
         error_show = True
         while True:
             self.lcd.fill(self._white)
@@ -145,7 +145,7 @@ class LCD:
             self.display()
             time.sleep(1)
     
-    def offline_screen(self, actual_time):
+    def offline_screen(self, actual_time: time.struct_time) -> None:
         self.lcd.fill(self._black)
         hours_left = 24 if actual_time[3] >= 8 else 0
         difference = "{0:3d}:{1:02d}:{2:02d}".format(8 + hours_left - 1 - actual_time[3], 60 - 1 - actual_time[4],
@@ -157,7 +157,7 @@ class LCD:
 
 class PowerPlant:
 
-    def __init__(self, heater_70, tank, rs485, counter_L1: Counter, counter_L2: Counter):
+    def __init__(self, heater_70: Heater, tank: Heater, rs485: machine.UART, counter_L1: Counter, counter_L2: Counter) -> None:
         self.heater_70 = heater_70
         self.tank = tank
         self.rs485 = rs485
@@ -167,24 +167,24 @@ class PowerPlant:
         self.counter_L1 = 0
         self.counter_L2 = 0
     
-    def heaters_all_stop(self):
+    def heaters_all_stop(self) -> None:
         self.heater_70.all_stop()
         self.tank.all_stop()
 
     @staticmethod
-    def out_of_limits(min: int, value: int or float, max: int):
+    def out_of_limits(min: int, value: int or float, max: int) -> None:
         if min <= value <= max:
             return value
         raise ValueError(min, value, max)
     
     @staticmethod
-    def singed_int(hexstr: str):
+    def singed_int(hexstr: str) -> int:
         value = int(hexstr, 16)
         if value & (1 << (16 - 1)):
             value -= 1 << 16
         return value
 
-    def read_battery_parameters(self, command: str):
+    def read_battery_parameters(self, command: str) -> tuple[bool, float, float, float]:
         try:
             self.rs485.write(ubinascii.unhexlify(command))
             time.sleep(0.125)
@@ -208,29 +208,15 @@ class PowerPlant:
             self.counter_connection_error = 0
             return response
         
-    def _get_counters_data(self):
+    def _get_counters_data(self) -> None:
         return self.counter_L1.get_count(), self.counter_L2.get_count()
     
-    def zero_counters(self):
+    def zero_counters(self) -> None:
         self.counter_L1.zero_counter()
         self.counter_L2.zero_counter()
 
-    def set_heaters(self, SOC, current):
+    def set_heaters(self, SOC: float, current: float) -> None:
         count_L1, count_L2 = self._get_counters_data()
         self.tank.set(SOC, current, False, self.heater_70.value(), count_L1, True)#heater_301.value())
         self.heater_70.set(SOC, current, self.tank.change, True, count_L2, True) #heater_301.value(), count_L2, True)
         #heater_301.set(SOC, current, heater_70.change or tank.change, True, count_L1, True)
-
-class PinInterruptHandler:
-
-    def __init__(self):
-        self.value = 0  # Initial value
-        self._pin = Pin(2, Pin.IN)  # Replace '2' with your pin number
-        self._pin.irq(trigger=Pin.IRQ_FALLING, handler=self._interrupt_handler)
-        
-    def _interrupt_handler(self, pin):
-        # This method will be called when the interrupt occurs
-        self._value += 1
-
-    def get_value(self):
-        return self._value
