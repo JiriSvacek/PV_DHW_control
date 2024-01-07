@@ -115,7 +115,7 @@ class LCD:
         self.button.irq.handler = self._telemetry_show
     
     def _telemetry_show(self, pin: machine.Pin) -> None:
-        pin.irq.handler = None
+        pin.irq.handler = lambda pin: None
         self.offline_telemetry = True
         machine.Timer.init(mode=machine.Timer.ONE_SHOT, period=2000, callback=self._telemetry_hide)
 
