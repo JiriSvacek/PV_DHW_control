@@ -1,3 +1,4 @@
+"""Module with classes."""
 import lcd_0inch96
 import ubinascii
 import time

@@ -1,8 +1,12 @@
-from ds3231 import DS3231
-from machine import RTC, I2C, Pin
+"""Module for synchronize time Pi Pico RTC with DS3231 Pi pico module RTC."""
+import ds3231
+import machine
 
-rtc = RTC()
 
-clock = DS3231(I2C(0, scl=Pin(21), sda=Pin(20)))
+def main():
+    clock = ds3231.DS3231(machine.I2C(0, scl=machine.Pin(21), sda=machine.Pin(20)))
+    clock.set_time()
 
-clock.set_time()
+
+if __name__ == "__main__":
+    main()

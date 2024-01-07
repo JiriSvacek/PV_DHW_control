@@ -1,3 +1,4 @@
+"""Module with main control logic."""
 import lcd_0inch96
 import ds3231
 import machine
