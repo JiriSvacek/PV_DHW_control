@@ -4,7 +4,7 @@ import machine
 import models
 import time
 
-def synchronization(clock):
+def synchronization(clock: ds3231.DS3231) -> bool:
     try:
         machine.RTC().datetime(clock.get_time())
         return False
@@ -12,7 +12,7 @@ def synchronization(clock):
         return True
 
 
-def init():
+def init() -> tuple[models.PowerPlant, ds3231.DS3231, models.LCD, int, float]:
     # Init object
     #heater_301 = Heater(6, 65, 50, -40, 14)
     heater_70 = models.Heater(machine.Pin(7, machine.Pin.OUT, value=0), 82, 70, -40, 14)
@@ -25,15 +25,13 @@ def init():
     clock = ds3231.DS3231(machine.I2C(0, scl=machine.Pin(21), sda=machine.Pin(20)))
     # Init object
     lcd = models.LCD(lcd_0inch96.LCD_0inch96(), machine.Pin(15, machine.Pin.IN, machine.Pin.PULL_UP))
-    return power_plant, clock, lcd
+    return power_plant, clock, lcd, time.localtime()[2], time.time()
 
 
-def main():
+def main() -> None:
     send_telemetry = "7E3230303034363432453030323030464433370D"
-    power_plant, clock, lcd = init()
+    power_plant, clock, lcd, last_sync, last_cycle = init()
     flag_error = synchronization(clock)
-    last_sync = time.localtime()[2]
-    last_cycle = time.time()
     while not flag_error:
         actual_time = time.localtime()
         if 8 <= actual_time[3] <= 18:
@@ -54,7 +52,7 @@ def main():
                 lcd.offline_screen(actual_time)
             time.sleep(0.5)
         if last_sync != actual_time[2] and 19 < actual_time[3]:
-            flag_error = synchronization()
+            flag_error = synchronization(clock)
             last_sync = actual_time[2]
         lcd.add_time(actual_time)
         lcd.display()
