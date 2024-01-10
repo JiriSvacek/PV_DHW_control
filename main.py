@@ -1,11 +1,13 @@
 """Module with main control logic."""
+import time
 import lcd_0inch96
 import ds3231
 import machine
 import models
-import time
+
 
 def synchronization(clock: ds3231.DS3231) -> bool:
+    """Synchronize Pico RTC with external clock."""
     try:
         machine.RTC().datetime(clock.get_time())
         return False
@@ -14,8 +16,9 @@ def synchronization(clock: ds3231.DS3231) -> bool:
 
 
 def init() -> tuple[models.PowerPlant, ds3231.DS3231, models.LCD, int, float]:
+    """Init objects."""
     # Init object
-    #heater_301 = Heater(6, 65, 50, -40, 14)
+    # heater_301 = Heater(6, 65, 50, -40, 14)
     heater_70 = models.Heater(machine.Pin(7, machine.Pin.OUT, value=0), 82, 70, -40, 14)
     tank = models.Heater(machine.Pin(14, machine.Pin.OUT, value=0), 92, 86, -40, 20)
     rs485 = machine.UART(0, baudrate=19200, tx=machine.Pin(0), rx=machine.Pin(1))
@@ -25,11 +28,14 @@ def init() -> tuple[models.PowerPlant, ds3231.DS3231, models.LCD, int, float]:
     # Init object
     clock = ds3231.DS3231(machine.I2C(0, scl=machine.Pin(21), sda=machine.Pin(20)))
     # Init object
-    lcd = models.LCD(lcd_0inch96.LCD_0inch96(), machine.Pin(15, machine.Pin.IN, machine.Pin.PULL_UP))
+    lcd = models.LCD(
+        lcd_0inch96.LCD_0inch96(), machine.Pin(15, machine.Pin.IN, machine.Pin.PULL_UP)
+    )
     return power_plant, clock, lcd, time.localtime()[2], time.time()
 
 
 def main() -> None:
+    """Main function."""
     send_telemetry = "7E3230303034363432453030323030464433370D"
     power_plant, clock, lcd, last_sync, last_cycle = init()
     flag_error = synchronization(clock)
@@ -38,16 +44,20 @@ def main() -> None:
         if 8 <= actual_time[3] <= 18:
             if time.time() - last_cycle >= 2:
                 last_cycle = time.time()
-                flag_error, SOC, current, voltage = power_plant.read_battery_parameters(send_telemetry)
-                power_plant.set_heaters(SOC, current)
-                lcd.show_battery_params(SOC, current, voltage)
+                flag_error, soc, current, voltage = power_plant.read_battery_parameters(
+                    send_telemetry
+                )
+                power_plant.set_heaters(soc, current)
+                lcd.show_battery_params(soc, current, voltage)
             else:
                 time.sleep(0.1)
         else:
             power_plant.zero_counters()
             power_plant.heaters_all_stop()
             if lcd.offline_telemetry:
-                flag_error, *battery_parameters = power_plant.read_battery_parameters(send_telemetry)
+                flag_error, *battery_parameters = power_plant.read_battery_parameters(
+                    send_telemetry
+                )
                 lcd.show_battery_params(*battery_parameters)
             else:
                 lcd.offline_screen(actual_time)
@@ -59,6 +69,7 @@ def main() -> None:
         lcd.display()
     power_plant.heaters_all_stop()
     lcd.error_loop()
-    
+
+
 if __name__ == "__main__":
     main()

@@ -17,7 +17,7 @@ System has got several compoments. Rasberry Pi pico which is the "brain" and con
 * __Pin 27__ - Switching output from electric consumption meter at phase 2
 
 ### Outputs
-* __Pin 6__ - Water heater with highest priority, connected on phase __1__
+* __Pin 6__ - Water heater with highest priority, connected on phase __1__, (currently disabled)
 * __Pin 7__ - Water heater with normal priority, connected on phase __2__
 * __Pin 14__ - Water heater with low priority (big water heater, water is not almost used, backup), connected on phase __1__
   

@@ -4,6 +4,7 @@ import machine
 
 
 def main():
+    """Set DS3231 clock."""
     clock = ds3231.DS3231(machine.I2C(0, scl=machine.Pin(21), sda=machine.Pin(20)))
     clock.set_time()
 
