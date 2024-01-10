@@ -164,7 +164,10 @@ class LCD:
         self.lcd.write_cmd(0x36)
         self.lcd.write_data(0x70)
         self.button = pin
-        self.button.irq(trigger=machine.Pin.IRQ_FALLING, handler=self._telemetry_show)
+        self.button.irq(
+            trigger=machine.Pin.IRQ_RISING | machine.Pin.IRQ_FALLING,
+            handler=self._telemetry_show,
+        )
         self.timer = machine.Timer()
         self.offline_telemetry = False
         self.ticks = time.ticks_ms()
