@@ -36,7 +36,7 @@ class Heater:
         act_current: float,
         slave_status: bool,
         master_status: bool,
-    ) -> None:
+    ) -> bool:
         return (
             (
                 act_current > self.flag_start_current
@@ -137,7 +137,7 @@ class Counter:
         self.pin.irq(trigger=machine.Pin.IRQ_FALLING, handler=self.trigger_count)
         self.counter = 0
 
-    def trigger_count(self, Pin: machine.Pin) -> None:
+    def trigger_count(self, pin: machine.Pin) -> None:
         """Count up counter"""
         self.counter += 1
 
@@ -159,7 +159,9 @@ class LCD:
     _white = lcd_0inch96.WHITE
     _black = lcd_0inch96.BLACK
 
-    def __init__(self, lcd: lcd_0inch96.LCD_0inch96, pin: machine.Pin):
+    def __init__(
+        self, lcd: lcd_0inch96.LCD_0inch96, pin: machine.Pin, timer: machine.Timer
+    ):
         self.lcd = lcd
         self.lcd.write_cmd(0x36)
         self.lcd.write_data(0x70)
@@ -168,7 +170,7 @@ class LCD:
             trigger=machine.Pin.IRQ_RISING | machine.Pin.IRQ_FALLING,
             handler=self._telemetry_show,
         )
-        self.timer = machine.Timer()
+        self.timer = timer
         self.offline_telemetry = False
         self.ticks = time.ticks_ms()
 
@@ -194,10 +196,15 @@ class LCD:
         self.lcd.text(f"Voltage: {float(voltage):6.2f} V", 12, 6, self._blue)
         self.lcd.text(f"Current: {float(current):6.2f} A", 12, 26, self._blue)
         self.lcd.text(f"SOC:     {float(soc):6.1f} %", 12, 46, self._blue)
+        self.add_time()
+        self.display()
 
-    def add_time(self, actual: time.struct_time) -> None:
+    def add_time(self) -> None:
         """Text field with actual time and date."""
-        time_str = f"{actual[3]:2d}:{actual[4]:02d}:{actual[5]:02d} {actual[2]:2d}.{actual[1]:2d}.{actual[0]:4d}"
+        act = time.localtime()
+        time_str = (
+            f"{act[3]:2d}:{act[4]:02d}:{act[5]:02d} {act[2]:2d}.{act[1]:2d}.{act[0]:4d}"
+        )
         self.lcd.text(time_str, 4, 66, self._blue)
 
     def display(self) -> None:
@@ -217,14 +224,19 @@ class LCD:
             self.display()
             time.sleep(1)
 
-    def offline_screen(self, actual: time.struct_time) -> None:
+    def offline_screen(self) -> None:
         """Show screen when offline."""
         self.lcd.fill(self._black)
         self.lcd.text("Heaters are OFF", 21, 6, self._blue)
         self.lcd.text("Planned start in:", 13, 26, self._blue)
-        hours_left = 24 if actual[3] >= 8 else 0
-        left_str = f"{8 + hours_left - 1 - actual[3]:3d}:{60 - 1 - actual[4]:02d}:{60 - actual[5]:02d}"
+        act = time.localtime()
+        hours_left = 24 if act[3] >= 8 else 0
+        left_str = (
+            f"{8 + hours_left - 1 - act[3]:3d}:{60 - 1 - act[4]:02d}:{60 - act[5]:02d}"
+        )
         self.lcd.text(left_str, 40, 46, self._blue)
+        self.add_time()
+        self.display()
 
 
 class PowerPlant:
@@ -251,7 +263,7 @@ class PowerPlant:
         self.tank.all_stop()
 
     @staticmethod
-    def out_of_limits(minimum: int, value: int or float, maxximum: int) -> None:
+    def out_of_limits(minimum: int, value: float, maxximum: int) -> float:
         """Check value if in the limits."""
         if minimum <= value <= maxximum:
             return value
