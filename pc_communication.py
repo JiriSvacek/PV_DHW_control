@@ -53,7 +53,7 @@ def main() -> None:
             received = ser.readline()
             hex_received = str(received)[
                 message_start:message_finished
-            ]  # trim recivied.
+            ]  # trim received.
             assert len(hex_received) / 2 == sum(
                 chunks_status.values()
             ), "Messsage has wrong lenght."
