@@ -17,6 +17,10 @@ def main() -> None:
     port = "COM7"
     cmd_give_status = "7E 32 30 30 30 34 36 34 32 45 30 30 32 30 30 46 44 33 37 0D"
     info_size = 75  # bytes
+    message_start = 15  # first 15 is respone status
+    message_finished = (
+        message_start + info_size * 2
+    )  # trim out end of line, info _size * 2 -> bytes to hex
     chunks_status = {  # according to seplos bms protocol v2.0, number represents bytes, total 75
         "data_flag": 1,
         "command_group": 1,
@@ -47,22 +51,17 @@ def main() -> None:
         while True:
             ser.write(bytes.fromhex(cmd_give_status))
             received = ser.readline()
-            message_start = 15  # first 15 is respone status
-            message_finished = (
-                message_start + info_size * 2  # trim out end of line
-            )  # info _size * 2 -> bytes to hex
             hex_received = str(received)[
                 message_start:message_finished
             ]  # trim recivied.
-            double_chunks_status = [i * 2 for i in chunks_status.values()]
-            assert len(hex_received) == sum(
-                double_chunks_status
+            assert len(hex_received) / 2 == sum(
+                chunks_status.values()
             ), "Messsage has wrong lenght."
             it = iter(str(hex_received))
-            result = ["".join(islice(it, i)) for i in double_chunks_status]
+            result = ["".join(islice(it, 2 * i)) for i in chunks_status.values()]
+            output_hex = dict(zip(chunks_status.keys(), result))
             # hex to dec representers -> cell_voltage(mV), temperature(0.1 °C), capacity(0.01 Ah)
             # SOH, SOC (1‰), port/battery voltage(0.01V), current (signed int, 0.01A)
-            output_hex = dict(zip(chunks_status.keys(), result))
             print(
                 "SOC:",
                 (int(output_hex["SOC"], base=16) / 10),
